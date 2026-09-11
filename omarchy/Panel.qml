@@ -102,50 +102,75 @@ Panel {
     })
   }
 
-  readonly property string backendLauncher: {
-    var url = Qt.resolvedUrl("../bin/ai-usagebar-launcher.sh").toString()
-    return url.indexOf("file://") === 0 ? url.substring(7) : url
-  }
-  readonly property int processTimeoutMs: 15000
+  // The bundled native supervisor opens each fixed candidate with O_NOFOLLOW,
+  // validates a root-owned, non-writable regular file, then execs that same
+  // descriptor. It also owns the process-group deadline and byte caps.
+  readonly property string backendLauncher:
+    Qt.resolvedUrl("../bin/ai-usage-pills-runner").toString()
+  readonly property int processTimeoutSec: 15
   readonly property int maxOutputBytes: 65536
-  property bool timedOut: false
+  property bool refreshActive: false
+  property bool processStartFailed: false
+  property bool processExited: false
+  property bool stdoutFinished: false
+  property bool stderrFinished: false
 
   function startRefresh() {
-    if (usageProcess.running) {
+    if (refreshActive || usageProcess.running) {
       refreshQueued = true
       return
     }
+    refreshActive = true
     refreshQueued = false
-    timedOut = false
+    processStartFailed = false
+    processExited = false
+    stdoutFinished = false
+    stderrFinished = false
     commandStdout = ""
     commandStderr = ""
     if (entries.length === 0) loading = true
-    watchdogTimer.restart()
     usageProcess.running = true
   }
 
+  function maybeFinishRefresh() {
+    if (!refreshActive || !processExited || !stdoutFinished || !stderrFinished) return
+    Qt.callLater(function() {
+      if (refreshActive && processExited && stdoutFinished && stderrFinished)
+        finishRefresh()
+    })
+  }
+
   function finishRefresh() {
-    watchdogTimer.stop()
-    killFallbackTimer.stop()
-    if (timedOut) {
-      loading = false
-      nowMs = Date.now()
-      if (refreshQueued) Qt.callLater(startRefresh)
-      return
-    }
-    var parsed = Model.parseReport(commandStdout)
-    if (parsed.ok) {
-      entries = parsed.entries
-      loadError = ""
+    var detail = commandStderr.trim()
+    if (processStartFailed) {
+      loadError = "The bundled ai-usagebar launcher could not be started."
+    } else if (lastExitCode === 124) {
+      loadError = "ai-usagebar process timed out after " + processTimeoutSec + "s."
+    } else if (lastExitCode === 125) {
+      loadError = "ai-usagebar produced more than " + Math.round(maxOutputBytes / 1024)
+        + " KB on one output stream; the backend was terminated."
+    } else if (lastExitCode === 126) {
+      loadError = detail
+        || "ai-usagebar is unavailable in trusted system paths (/usr/bin, /usr/local/bin)."
+    } else if (lastExitCode !== 0) {
+      loadError = detail || "ai-usagebar exited unsuccessfully."
     } else {
-      var detail = commandStderr.trim()
-      loadError = lastExitCode === 127
-        ? (detail || "ai-usagebar is not installed in trusted system paths (/usr/bin, /usr/local/bin).")
-        : (detail || parsed.error)
+      var parsed = Model.parseReport(commandStdout)
+      if (parsed.ok) {
+        entries = parsed.entries
+        loadError = ""
+      } else {
+        loadError = detail || parsed.error
+      }
     }
     loading = false
     nowMs = Date.now()
-    if (refreshQueued) Qt.callLater(startRefresh)
+    var runQueued = refreshQueued
+    refreshQueued = false
+    refreshActive = false
+    if (runQueued) Qt.callLater(function() {
+      if (!root.refreshActive) root.startRefresh()
+    })
   }
 
   function refresh() { startRefresh() }
@@ -172,57 +197,46 @@ Panel {
     onTriggered: root.nowMs = Date.now()
   }
 
-  Timer {
-    id: watchdogTimer
-    interval: root.processTimeoutMs
-    repeat: false
-    onTriggered: {
-      if (usageProcess.running) {
-        root.timedOut = true
-        root.loadError = "ai-usagebar process timed out after " + Math.round(root.processTimeoutMs / 1000) + "s."
-        usageProcess.signal(15) // SIGTERM
-        killFallbackTimer.restart()
-      }
-    }
-  }
-
-  Timer {
-    id: killFallbackTimer
-    interval: 2000 // 2s fallback before SIGKILL
-    repeat: false
-    onTriggered: {
-      if (usageProcess.running) {
-        usageProcess.signal(9) // SIGKILL
-        usageProcess.running = false
-      }
-    }
-  }
-
   Process {
     id: usageProcess
     running: false
-    // Launch through trusted script enforcing absolute path and non-symlink verification
-    command: [root.backendLauncher, "usage", "--json"]
+    // The supervisor forwards at most maxOutputBytes per stream. Collecting the
+    // bounded bytes to completion lets Qt decode UTF-8 once, so a multibyte
+    // character split across pipe reads cannot be corrupted.
+    command: [root.backendLauncher, String(root.processTimeoutSec * 1000),
+      String(root.maxOutputBytes)]
 
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        var str = String(text || "")
-        root.commandStdout = str.length > root.maxOutputBytes ? str.substring(0, root.maxOutputBytes) : str
+        root.commandStdout = String(text || "")
+        root.stdoutFinished = true
+        root.maybeFinishRefresh()
       }
     }
     stderr: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        var str = String(text || "")
-        root.commandStderr = str.length > root.maxOutputBytes ? str.substring(0, root.maxOutputBytes) : str
+        root.commandStderr = String(text || "")
+        root.stderrFinished = true
+        root.maybeFinishRefresh()
       }
     }
     onExited: function(exitCode, exitStatus) {
-      watchdogTimer.stop()
-      killFallbackTimer.stop()
+      root.processExited = true
       root.lastExitCode = exitCode
-      Qt.callLater(root.finishRefresh)
+      root.maybeFinishRefresh()
+    }
+    onRunningChanged: {
+      // A process that never starts emits no stream or exited signals.
+      if (root.refreshActive && !running && !root.processExited) {
+        root.processStartFailed = true
+        root.processExited = true
+        root.stdoutFinished = true
+        root.stderrFinished = true
+        root.lastExitCode = 2
+        root.maybeFinishRefresh()
+      }
     }
   }
 
@@ -295,7 +309,7 @@ Panel {
                   tooltipText: "Refresh all four providers"
                   foreground: root.foreground
                   fontFamily: root.fontFamily
-                  enabled: !usageProcess.running
+                  enabled: !root.refreshActive
                   onClicked: root.refresh()
                 }
                 PanelActionButton {
@@ -451,7 +465,7 @@ Panel {
             visible: !root.settingsOpen && root.selectedState.fetched !== ""
             width: parent.width
             text: Model.formatUpdated(root.selectedState.fetched, root.nowMs)
-              + (usageProcess.running ? " · refreshing…" : "")
+              + (root.refreshActive ? " · refreshing…" : "")
             textFormat: Text.PlainText
             color: root.dim
             font.family: root.fontFamily

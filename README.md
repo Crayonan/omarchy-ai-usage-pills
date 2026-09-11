@@ -88,7 +88,11 @@ Settings can be customized via Omarchy bar widget configuration, the right-click
 
 ## Dependencies
 
-- **`ai-usagebar`**: The CLI utility required to query and aggregate AI provider usage metrics. Must be installed in trusted system paths (`/usr/bin/ai-usagebar` or `/usr/local/bin/ai-usagebar`).
+- **`ai-usagebar`**: The CLI utility required to query and aggregate AI provider usage metrics. It must be a root-owned regular executable at `/usr/bin/ai-usagebar` or `/usr/local/bin/ai-usagebar`, with no group or other write permission.
+- **Linux x86-64**: The plugin ships a static native supervisor at `bin/ai-usage-pills-runner`.
+  Its source is `native/ai-usage-pills-runner.c`; `make clean all test` rebuilds it and byte-checks the shipped artifact before release.
+
+The supervisor rejects symlinks and unsafe ownership or modes, executes the validated descriptor directly, bounds each output stream to 64 KiB, and terminates the backend process group after 15 seconds.
 
 ## License
 
