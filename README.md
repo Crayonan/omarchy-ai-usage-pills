@@ -1,6 +1,6 @@
-<img width="1920" height="48" alt="screenshot-2026-09-11_04-50-16" src="https://github.com/user-attachments/assets/73cd5226-6a98-42d3-9806-5a85c9920391" />
-
-<img width="342" height="27" alt="screenshot-2026-09-11_04-46-06" src="https://github.com/user-attachments/assets/fbf9cea9-e0c9-4d4b-8f33-21a5070118f6" />
+<p align="center">
+  <img alt="AI Usage Pills Showcase" src="preview.png" width="100%" />
+</p>
 
 
 # AI Usage Pills (`bit-dev.ai-usage-pills`)
