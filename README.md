@@ -50,6 +50,15 @@ To display OpenRouter usage and credit balance, provide your OpenRouter API key 
    ```
    Add this to your shell profile (e.g., `~/.bashrc`, `~/.zshrc`, or your desktop environment) so it is available to the Omarchy session.
 
+## Companion Plugins
+
+AI Usage Pills is part of the Omarchy Pill suite and pairs seamlessly with:
+
+| Plugin | Description | Install Command |
+|---|---|---|
+| **[Pill Bar](https://github.com/Crayonan/omarchy-bar)** (`bit-dev.bar`) | Floating island pill-style status bar for Omarchy | `omarchy plugin add https://github.com/Crayonan/omarchy-bar.git --enable` |
+| **[System Pills](https://github.com/Crayonan/omarchy-system-pills)** (`bit-dev.system-pills`) | Live CPU, memory, and GPU usage pills | `omarchy plugin add https://github.com/Crayonan/omarchy-system-pills.git --enable` |
+
 ## Removal
 
 To disable the widget from the status bar:
