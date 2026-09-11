@@ -33,6 +33,23 @@ omarchy plugin add https://github.com/Crayonan/omarchy-ai-usage-pills.git
 omarchy plugin enable bit-dev.ai-usage-pills --section right
 ```
 
+### Configuring OpenRouter
+
+To display OpenRouter usage and credit balance, provide your OpenRouter API key to `ai-usagebar` using either method:
+
+1. **In `~/.config/ai-usagebar/config.toml`** (recommended):
+   ```toml
+   [openrouter]
+   enabled = true
+   api_key = "sk-or-v1-..."
+   ```
+
+2. **Via environment variable**:
+   ```bash
+   export OPENROUTER_API_KEY="sk-or-v1-..."
+   ```
+   Add this to your shell profile (e.g., `~/.bashrc`, `~/.zshrc`, or your desktop environment) so it is available to the Omarchy session.
+
 ## Removal
 
 To disable the widget from the status bar:
