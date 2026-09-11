@@ -88,7 +88,7 @@ Settings can be customized via Omarchy bar widget configuration, the right-click
 
 ## Dependencies
 
-- **`ai-usagebar`**: The CLI utility required to query and aggregate AI provider usage metrics. Must be installed and accessible on `PATH` (`ai-usagebar usage --json`).
+- **`ai-usagebar`**: The CLI utility required to query and aggregate AI provider usage metrics. Must be installed in trusted system paths (`/usr/bin/ai-usagebar` or `/usr/local/bin/ai-usagebar`).
 
 ## License
 

@@ -102,19 +102,37 @@ Panel {
     })
   }
 
+  readonly property string backendLauncher: {
+    var url = Qt.resolvedUrl("../bin/ai-usagebar-launcher.sh").toString()
+    return url.indexOf("file://") === 0 ? url.substring(7) : url
+  }
+  readonly property int processTimeoutMs: 15000
+  readonly property int maxOutputBytes: 65536
+  property bool timedOut: false
+
   function startRefresh() {
     if (usageProcess.running) {
       refreshQueued = true
       return
     }
     refreshQueued = false
+    timedOut = false
     commandStdout = ""
     commandStderr = ""
     if (entries.length === 0) loading = true
+    watchdogTimer.restart()
     usageProcess.running = true
   }
 
   function finishRefresh() {
+    watchdogTimer.stop()
+    killFallbackTimer.stop()
+    if (timedOut) {
+      loading = false
+      nowMs = Date.now()
+      if (refreshQueued) Qt.callLater(startRefresh)
+      return
+    }
     var parsed = Model.parseReport(commandStdout)
     if (parsed.ok) {
       entries = parsed.entries
@@ -122,7 +140,7 @@ Panel {
     } else {
       var detail = commandStderr.trim()
       loadError = lastExitCode === 127
-        ? "ai-usagebar is not installed. Install the backend, then refresh."
+        ? (detail || "ai-usagebar is not installed in trusted system paths (/usr/bin, /usr/local/bin).")
         : (detail || parsed.error)
     }
     loading = false
@@ -154,21 +172,55 @@ Panel {
     onTriggered: root.nowMs = Date.now()
   }
 
+  Timer {
+    id: watchdogTimer
+    interval: root.processTimeoutMs
+    repeat: false
+    onTriggered: {
+      if (usageProcess.running) {
+        root.timedOut = true
+        root.loadError = "ai-usagebar process timed out after " + Math.round(root.processTimeoutMs / 1000) + "s."
+        usageProcess.signal(15) // SIGTERM
+        killFallbackTimer.restart()
+      }
+    }
+  }
+
+  Timer {
+    id: killFallbackTimer
+    interval: 2000 // 2s fallback before SIGKILL
+    repeat: false
+    onTriggered: {
+      if (usageProcess.running) {
+        usageProcess.signal(9) // SIGKILL
+        usageProcess.running = false
+      }
+    }
+  }
+
   Process {
     id: usageProcess
     running: false
-    // One fixed aggregate invocation refreshes all four slots; no shell or secrets.
-    command: ["/usr/bin/env", "ai-usagebar", "usage", "--json"]
+    // Launch through trusted script enforcing absolute path and non-symlink verification
+    command: [root.backendLauncher, "usage", "--json"]
 
     stdout: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.commandStdout = text
+      onStreamFinished: {
+        var str = String(text || "")
+        root.commandStdout = str.length > root.maxOutputBytes ? str.substring(0, root.maxOutputBytes) : str
+      }
     }
     stderr: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.commandStderr = text
+      onStreamFinished: {
+        var str = String(text || "")
+        root.commandStderr = str.length > root.maxOutputBytes ? str.substring(0, root.maxOutputBytes) : str
+      }
     }
-    onExited: function(exitCode) {
+    onExited: function(exitCode, exitStatus) {
+      watchdogTimer.stop()
+      killFallbackTimer.stop()
       root.lastExitCode = exitCode
       Qt.callLater(root.finishRefresh)
     }
