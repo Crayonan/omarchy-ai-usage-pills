@@ -1,0 +1,64 @@
+# AI Usage Pills (`bit-dev.ai-usage-pills`)
+
+A comprehensive Omarchy shell bar widget displaying live usage quotas and metrics for Anthropic, OpenAI, Antigravity Gemini, and OpenRouter in four simultaneous branded pills, backed by an aggregate `ai-usagebar` report.
+
+## Features
+
+- **Four Branded Pills**: Dedicated indicators for Anthropic (Claude), OpenAI (ChatGPT/Codex), Google Antigravity (Gemini), and OpenRouter.
+- **Detailed Popout Panel**: Click any pill to view quota limits, remaining credits/requests, reset windows, and status.
+- **Quick Actions**:
+  - **Left Click**: Open provider detailed usage panel.
+  - **Middle Click**: Force immediate data refresh.
+  - **Right Click**: Open in-panel appearance and interval settings.
+- **Customizable**: Configurable refresh intervals, individual accent colors per provider, and background tint opacity.
+- **Adaptive Layout**: Automatically adjusts display density between full, compact, and minimal modes based on bar orientation and available screen width.
+
+## Installation
+
+Install directly using the Omarchy CLI:
+
+```bash
+omarchy plugin add https://github.com/Crayonan/omarchy-ai-usage-pills.git --enable
+```
+
+If you prefer to install without enabling immediately:
+
+```bash
+omarchy plugin add https://github.com/Crayonan/omarchy-ai-usage-pills.git
+omarchy plugin enable bit-dev.ai-usage-pills --section right
+```
+
+## Removal
+
+To disable the widget from the status bar:
+
+```bash
+omarchy plugin disable bit-dev.ai-usage-pills
+```
+
+To completely uninstall and delete the plugin files:
+
+```bash
+omarchy plugin remove bit-dev.ai-usage-pills
+```
+
+## Configuration
+
+Settings can be customized via Omarchy bar widget configuration, the right-click settings panel, or in `~/.config/omarchy/shell.json`:
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `refreshIntervalSec` | integer | `300` | Polling interval in seconds (30–3600s) |
+| `anthropicAccent` | string (hex color) | `#D97757` | Accent color for Anthropic |
+| `openaiAccent` | string (hex color) | `#10A37F` | Accent color for OpenAI |
+| `antigravityAccent` | string (hex color) | `#4285F4` | Accent color for Google Antigravity |
+| `openrouterAccent` | string (hex color) | `#6566F1` | Accent color for OpenRouter |
+| `pillOpacity` | number | `0.24` | Background tint opacity (0.08–0.85) |
+
+## Dependencies
+
+- **`ai-usagebar`**: The CLI utility required to query and aggregate AI provider usage metrics. Must be installed and accessible on `PATH` (`ai-usagebar usage --json`).
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

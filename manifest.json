@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "bit-dev.ai-usage-pills",
+  "name": "AI Usage Pills",
+  "version": "1.0.0",
+  "author": "bit-dev",
+  "license": "MIT",
+  "description": "Four simultaneous branded AI usage pills backed by one ai-usagebar report.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "omarchy/BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "AI Usage Pills",
+    "description": "Claude, OpenAI, Antigravity Gemini and OpenRouter usage at a glance.",
+    "category": "AI",
+    "aliases": ["ai-usage", "usage-pills", "quota"],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 300,
+      "anthropicAccent": "#D97757",
+      "openaiAccent": "#10A37F",
+      "antigravityAccent": "#4285F4",
+      "openrouterAccent": "#6566F1",
+      "pillOpacity": 0.24
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 30,
+        "max": 3600,
+        "step": 30,
+        "defaultValue": 300
+      },
+      {
+        "key": "anthropicAccent",
+        "type": "string",
+        "label": "Anthropic accent",
+        "defaultValue": "#D97757"
+      },
+      {
+        "key": "openaiAccent",
+        "type": "string",
+        "label": "OpenAI accent",
+        "defaultValue": "#10A37F"
+      },
+      {
+        "key": "antigravityAccent",
+        "type": "string",
+        "label": "Google accent",
+        "defaultValue": "#4285F4"
+      },
+      {
+        "key": "openrouterAccent",
+        "type": "string",
+        "label": "OpenRouter accent",
+        "defaultValue": "#6566F1"
+      },
+      {
+        "key": "pillOpacity",
+        "type": "number",
+        "label": "Pill tint opacity",
+        "min": 0.08,
+        "max": 0.85,
+        "step": 0.01,
+        "defaultValue": 0.24
+      }
+    ]
+  }
+}
